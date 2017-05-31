@@ -18,7 +18,7 @@ fileinput=0
 function usage
 {
     echo "Bash script:   interactive (This script generates and executes interactive HPC jobs on umich Flux by given parameters)"
-    echo "Version:       1.2"
+    echo "Version:       1.2.2"
     echo 
     echo "Usage:    bash interactive.sh [options]"
     echo
@@ -26,7 +26,7 @@ function usage
     echo "             -o | --od          [int] Whether run on \"on demand\" nodes [default: $od]"
     echo "             -n | --nodes       [int] Number of nodes required [default: $nodes]"
     echo "             -p | --ppn         [int] Number of processors on each node [default: $ppn]"
-    echo "             -m | --pmem        [int] Memory required for each processor in GB [default: $pmem gb]"
+    echo "             -m | --pmem        [int] Memory required for each processor in GB [default: $pmem]"
     echo "             -l | --large       [int] Whether you'd like to run on large mem nodes [default: $large]"
     echo "             -h | --help        Display this chicken message"
     echo "             -f | --file        Input a bash script file and convert it into bps file [default: ]"
@@ -87,12 +87,12 @@ else
 fi
 
 if [ "$large" != "0" ]; then
-    if [ $pmem -le 4 ]; then
+    if [ $pmem -le 4.0 ]; then
 	echo "Memory per core is $pmem gb, no need to submit to large memory nodes"
 	exit 
     fi
     allocation=$(echo $default_allocation"m")
-    q="fluxm"
+    queue="fluxm"
 else
     if [ $pmem -gt 4 ]; then
 	echo "Memory per core is $pmem gb, please submit to large memory nodes"
@@ -119,8 +119,8 @@ fi
 
 echo "#PBS -V" >> $temp
 echo "#PBS -A $allocation" >> $temp
-echo "#PBS -l qos=$queue" >> $temp
-echo "#PBS -q $q" >> $temp
+echo "#PBS -l qos=flux" >> $temp
+echo "#PBS -q $queue" >> $temp
 echo "#PBS -l nodes=$nodes:ppn=$ppn,pmem=$pmemf,walltime=$time:00:00" >> $temp
 echo >> $temp
 echo >> $temp
