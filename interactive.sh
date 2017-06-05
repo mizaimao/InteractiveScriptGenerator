@@ -18,7 +18,7 @@ fileinput=0
 function usage
 {
     echo "Bash script:   interactive (This script generates and executes interactive HPC jobs on umich Flux by given parameters)"
-    echo "Version:       1.2.2"
+    echo "Version:       1.2.3"
     echo 
     echo "Usage:    bash interactive.sh [options]"
     echo
@@ -133,7 +133,7 @@ fi
 echo "=========JOB OVERVIEW========="
 echo "Cores: $(( $ppn * $nodes ))"
 echo "Nodes: $nodes"
-echo "Total Memory: $(( $ppn * $pmem )) gb"
+echo "Total Memory: $(( $ppn * $pmem * $nodes )) gb"
 echo "Wall Time: $time:00:00"
 echo "Large Memory Nodes: $(if [ $large == '0' ]; then echo "no"; else echo "yes"; fi)"
 echo "Allocation: $allocation"
