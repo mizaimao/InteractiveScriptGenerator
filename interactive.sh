@@ -14,15 +14,17 @@ q="flux"
 temp="/tmp/chickenIfile$USER.pbs"
 fileloc=   
 fileinput=0
+name=$(echo $USER)_improvise_$(date +"%Y%m%d_%H%M%S")
 
 function usage
 {
     echo "Bash script:   interactive (This script generates and executes interactive HPC jobs on umich Flux by given parameters)"
-    echo "Version:       1.2.3"
+    echo "Version:       1.2.4"
     echo 
     echo "Usage:    bash interactive.sh [options]"
     echo
     echo "options:     -t | --time        [int] Wall time of your interactive jobs in hours [default: $time]" 
+    echo "             -N | --name        [str] Name of current job [default: $name]" 
     echo "             -o | --od          [int] Whether run on \"on demand\" nodes [default: $od]"
     echo "             -n | --nodes       [int] Number of nodes required [default: $nodes]"
     echo "             -p | --ppn         [int] Number of processors on each node [default: $ppn]"
@@ -44,6 +46,9 @@ while [ "$1" != "" ]; do
         -t | --time )           shift
                                 time=$1
                                 ;;
+	-N | --name )           shift
+	                        name=$1
+				;;
         -o | --od )             shift
 	                        od=$1
                                 ;;
@@ -87,7 +92,7 @@ else
 fi
 
 if [ "$large" != "0" ]; then
-    if [ $pmem -le 4.0 ]; then
+    if [ $pmem -le 4 ]; then
 	echo "Memory per core is $pmem gb, no need to submit to large memory nodes"
 	exit 
     fi
@@ -106,7 +111,7 @@ pmemf=$(echo $pmem\gb) # format memory into pbs-acceptable form
 ## Generate PBS file using given parameters
 
 if [ "$fileinput" -eq "1" ]; then
-    echo "#PBS -N $(echo $USER)_improvise_$(date +"%Y%m%d_%H%M%S")" >  $temp
+    echo "#PBS -N $name" >  $temp
     echo "#PBS -m abe" >> $temp
     echo "#PBS -M $USER@umich.edu" >> $temp
     echo "#PBS -d ." >> $temp
@@ -131,7 +136,8 @@ fi
 
 ## Submit the job
 echo "=========JOB OVERVIEW========="
-echo "Cores: $(( $ppn * $nodes ))"
+echo "Job Name: $name"
+echo "Total Cores: $(( $ppn * $nodes ))"
 echo "Nodes: $nodes"
 echo "Total Memory: $(( $ppn * $pmem * $nodes )) gb"
 echo "Wall Time: $time:00:00"
