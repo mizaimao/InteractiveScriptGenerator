@@ -14,15 +14,19 @@ q="flux"
 temp="/tmp/chickenIfile$USER.pbs"
 fileloc=   
 fileinput=0
+#outputloc=
+fileoutput=0
+name=$(echo $USER)_improvise_$(date +"%Y%m%d_%H%M%S")
 
 function usage
 {
     echo "Bash script:   interactive (This script generates and executes interactive HPC jobs on umich Flux by given parameters)"
-    echo "Version:       1.2.3"
+    echo "Version:       1.2.5"
     echo 
     echo "Usage:    bash interactive.sh [options]"
     echo
     echo "options:     -t | --time        [int] Wall time of your interactive jobs in hours [default: $time]" 
+    echo "             -N | --name        [str] Name of current job [default: $name]" 
     echo "             -o | --od          [int] Whether run on \"on demand\" nodes [default: $od]"
     echo "             -n | --nodes       [int] Number of nodes required [default: $nodes]"
     echo "             -p | --ppn         [int] Number of processors on each node [default: $ppn]"
@@ -30,37 +34,38 @@ function usage
     echo "             -l | --large       [int] Whether you'd like to run on large mem nodes [default: $large]"
     echo "             -h | --help        Display this chicken message"
     echo "             -f | --file        Input a bash script file and convert it into bps file [default: ]"
-#    echo "             -t | --time "
-#    echo "             -t | --time "
+    echo "             -s | --save        Print out generated PBS script to stdout, you may redirect it to save"
 }
 
-
-
 ## Main, reading parameters
-#if [ "$1" == "" ]; then    usage; exit; fi
-
 while [ "$1" != "" ]; do
     case $1 in
         -t | --time )           shift
                                 time=$1
                                 ;;
+        -N | --name )           shift
+                                name=$1
+				;;
         -o | --od )             shift
-	                        od=$1
+                                od=$1
                                 ;;
         -n | --nodes )          shift
-	                        nodes=$1
+                                nodes=$1
                                 ;;
         -p | --ppn )            shift
-	                        ppn=$1
+                                ppn=$1
                                 ;;
         -m | --pmem )           shift
-	                        pmem=$1
+                                pmem=$1
                                 ;;
         -l | --large )          shift
-	                        large=$1
+                                large=$1
                                 ;;
-	-f | --file )           shift
+        -f | --file )           shift
                                 fileloc=$1
+                                ;;
+        -s | --save )           shift
+                                fileoutput=1
                                 ;;
         -h | --help )           usage
                                 exit
@@ -75,23 +80,24 @@ if [ -n "$fileloc" ]; then
     fileinput=1
 fi
 
-
 ## Proper Adjustment 
 echo
 if [ "$od" = "0" ]; then
-    echo "Job will be executed on normal nodes inseated of \"on demand\" nodes"
+#    echo "Job will be executed on normal nodes inseated of \"on demand\" nodes"
     queue="flux"
 else
     allocation=$ondemand_allocation
-    echo "Job will be executed on \"on demand\" nodes"
+#    echo "Job will be executed on \"on demand\" nodes"
 fi
 
 if [ "$large" != "0" ]; then
-    if [ $pmem -le 4.0 ]; then
+    if [ $pmem -le 4 ]; then
 	echo "Memory per core is $pmem gb, no need to submit to large memory nodes"
 	exit 
     fi
-    allocation=$(echo $default_allocation"m")
+    if [ "$od" = "0" ]; then
+	allocation=$(echo $default_allocation"m") 
+    fi
     queue="fluxm"
 else
     if [ $pmem -gt 4 ]; then
@@ -106,12 +112,12 @@ pmemf=$(echo $pmem\gb) # format memory into pbs-acceptable form
 ## Generate PBS file using given parameters
 
 if [ "$fileinput" -eq "1" ]; then
-    echo "#PBS -N $(echo $USER)_improvise_$(date +"%Y%m%d_%H%M%S")" >  $temp
+    echo "#PBS -N $name" >  $temp
     echo "#PBS -m abe" >> $temp
     echo "#PBS -M $USER@umich.edu" >> $temp
     echo "#PBS -d ." >> $temp
-    echo "#PBS -o /home/$USER/.logs/$USER/_improvise.log" >> $temp
-    echo "#PBS -e /home/$USER/.logs/$USER/_improvise.err" >> $temp
+    echo "#PBS -o /home/$USER/.logs/$name.log" >> $temp
+    echo "#PBS -e /home/$USER/.logs/$name.err" >> $temp
 else
     echo "#PBS -N $(echo $USER)_interactive" >  $temp
 fi
@@ -129,40 +135,53 @@ if [ "$fileinput" -eq "1" ] ; then
     less $fileloc | grep -v "#!/bin/bash" >> $temp&
 fi
 
-## Submit the job
-echo "=========JOB OVERVIEW========="
-echo "Cores: $(( $ppn * $nodes ))"
-echo "Nodes: $nodes"
-echo "Total Memory: $(( $ppn * $pmem * $nodes )) gb"
-echo "Wall Time: $time:00:00"
-echo "Large Memory Nodes: $(if [ $large == '0' ]; then echo "no"; else echo "yes"; fi)"
-echo "Allocation: $allocation"
-if [ "$fileinput" -eq "1" ] ; then
-    echo
-    echo "------------------------------"
-    echo "EXECUTING FOLLOWING COMMANDS:"
-    echo "------------------------------"
+## if user wants to save the file, then output only
+if [ "$fileoutput" -eq "1" ] ; then
+    echo "#!/bin/bash"
+    cat $temp
     less $fileloc | grep -v "#!/bin/bash" | cat
-fi
-echo "=============================="
-
-
-read -n1 -r -p "Does this look okay? Press Return to submit..." key
-
-if [ -z $key ]; then # Pressed, therefore submit
-    if [ "$fileinput" -eq "1" ] ; then
-        qsub $temp
-#	emacs $temp
-	echo
-    else
-        qsub -I $temp 
-#	emacs $temp
-	echo
-    fi
 else
-    echo 
-    echo 
-    echo Operation canceled
+    ## else submit the job
+    if [ "$od" = "0" ]; then
+        echo "Job will be executed on normal nodes inseated of \"on demand\" nodes"
+    else
+        echo "Job will be executed on \"on demand\" nodes"
+    fi
+    echo "=========JOB OVERVIEW========="
+    echo "Job Name: $name"
+    echo "Total Cores: $(( $ppn * $nodes ))"
+    echo "Nodes: $nodes"
+    echo "Total Memory: $(( $ppn * $pmem * $nodes )) gb"
+    echo "Wall Time: $time:00:00"
+    echo "Large Memory Nodes: $(if [ $large == '0' ]; then echo "no"; else echo "yes"; fi)"
+    echo "Allocation: $allocation"
+    if [ "$fileinput" -eq "1" ] ; then
+        echo
+        echo "------------------------------"
+        echo "EXECUTING FOLLOWING COMMANDS:"
+        echo "------------------------------"
+        less $fileloc | grep -v "#!/bin/bash" | cat
+    fi
+    echo "=============================="
+
+
+    read -n1 -r -p "Does this look okay? Press Return to submit..." key
+
+    if [ -z $key ]; then # Pressed, therefore submit
+        if [ "$fileinput" -eq "1" ] ; then
+            qsub $temp
+    #   emacs $temp
+        echo
+        else
+            qsub -I $temp 
+    #   emacs $temp
+        echo
+        fi
+    else
+        echo 
+        echo 
+        echo Operation canceled
+    fi
 fi
 
 ## Delete the temp chicken file
