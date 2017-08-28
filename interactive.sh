@@ -30,7 +30,7 @@ function usage
     echo "             -o | --od          [int] Whether run on \"on demand\" nodes [default: $od]"
     echo "             -n | --nodes       [int] Number of nodes required [default: $nodes]"
     echo "             -p | --ppn         [int] Number of processors on each node [default: $ppn]"
-    echo "             -m | --pmem        [int] Memory required for each processor in GB [default: $pmem]"
+    echo "             -m | --pmem        [int] Memory required for each processor in GB (1GB = 1000MB) [default: $pmem]"
     echo "             -l | --large       [int] Whether you'd like to run on large mem nodes [default: $large]"
     echo "             -h | --help        Display this chicken message"
     echo "             -f | --file        Input a bash script file and convert it into bps file [default: ]"
@@ -107,7 +107,7 @@ else
 fi
 
 
-pmemf=$(echo $pmem\gb) # format memory into pbs-acceptable form
+pmemf=$(echo $pmem\000mb) # format memory into pbs-acceptable form
 
 ## Generate PBS file using given parameters
 
@@ -147,11 +147,11 @@ else
     else
         echo "Job will be executed on \"on demand\" nodes"
     fi
-    echo "=========JOB OVERVIEW========="
+    echo "================JOB OVERVIEW================"
     echo "Job Name: $name"
     echo "Total Cores: $(( $ppn * $nodes ))"
     echo "Nodes: $nodes"
-    echo "Total Memory: $(( $ppn * $pmem * $nodes )) gb"
+    echo "Total Memory: $(( $ppn * $pmem * $nodes * 1000)) MB ($(( $ppn * $pmem * $nodes )) GB) "
     echo "Wall Time: $time:00:00"
     echo "Large Memory Nodes: $(if [ $large == '0' ]; then echo "no"; else echo "yes"; fi)"
     echo "Allocation: $allocation"
@@ -162,7 +162,7 @@ else
         echo "------------------------------"
         less $fileloc | grep -v "#!/bin/bash" | cat
     fi
-    echo "=============================="
+    echo "============================================"
 
 
     read -n1 -r -p "Does this look okay? Press Return to submit..." key
