@@ -21,7 +21,7 @@ name=$(echo $USER)_improvise_$(date +"%Y%m%d_%H%M%S")
 function usage
 {
     echo "Bash script:   interactive (This script generates and executes interactive HPC jobs on umich Flux by given parameters)"
-    echo "Version:       1.2.5"
+    echo "Version:       1.2.6"
     echo 
     echo "Usage:    bash interactive.sh [options]"
     echo
