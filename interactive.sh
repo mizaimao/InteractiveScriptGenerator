@@ -16,12 +16,13 @@ fileloc=
 fileinput=0
 #outputloc=
 fileoutput=0
+lambda=0
 name=$(echo $USER)_improvise_$(date +"%Y%m%d_%H%M%S")
 
 function usage
 {
     echo "Bash script:   interactive (This script generates and executes interactive HPC jobs on umich Flux by given parameters)"
-    echo "Version:       1.2.6"
+    echo "Version:       1.2.7"
     echo 
     echo "Usage:    bash interactive.sh [options]"
     echo
@@ -35,6 +36,7 @@ function usage
     echo "             -h | --help        Display this chicken message"
     echo "             -f | --file        Input a bash script file and convert it into bps file [default: ]"
     echo "             -s | --save        Print out generated PBS script to stdout, you may redirect it to save"
+    echo "             -L | --lambda      [int] Input a one-line command and convert it to a job [default: $lambda]"
 }
 
 ## Main, reading parameters
@@ -66,6 +68,9 @@ while [ "$1" != "" ]; do
                                 ;;
         -s | --save )           shift
                                 fileoutput=1
+                                ;;
+        -L | --lambda )         shift
+                                lambda=$1
                                 ;;
         -h | --help )           usage
                                 exit
@@ -135,11 +140,23 @@ if [ "$fileinput" -eq "1" ] ; then
     less $fileloc | grep -v "#!/bin/bash" >> $temp&
 fi
 
+## if user wants to input a one line job
+if [ "$lambda" -ge "1" ] ; then
+####################
+    echo "One-line command input:"
+    read cmd 
+    echo $cmd >> $temp
+    echo "============================================"
+fi
+
+
 ## if user wants to save the file, then output only
-if [ "$fileoutput" -eq "1" ] ; then
+if [ "$fileoutput" -eq "1" ] || [ "$lambda" -ge "2" ] ; then
     echo "#!/bin/bash"
     cat $temp
-    less $fileloc | grep -v "#!/bin/bash" | cat
+    if [ "$fileinput" -ge "1" ] ; then
+	less $fileloc | grep -v "#!/bin/bash" | cat
+    fi
 else
     ## else submit the job
     if [ "$od" = "0" ]; then
@@ -155,12 +172,17 @@ else
     echo "Wall Time: $time:00:00"
     echo "Large Memory Nodes: $(if [ $large == '0' ]; then echo "no"; else echo "yes"; fi)"
     echo "Allocation: $allocation"
-    if [ "$fileinput" -eq "1" ] ; then
+    if [ "$fileinput" -eq "1" ] || [ "$lambda" -ge "1" ] ; then
         echo
         echo "------------------------------"
         echo "EXECUTING FOLLOWING COMMANDS:"
         echo "------------------------------"
-        less $fileloc | grep -v "#!/bin/bash" | cat
+	if [ "$fileinput" -eq "1" ] ; then
+            less $fileloc | grep -v "#!/bin/bash" | cat
+	else
+	    #echo "#!/bin/bash"
+	    echo $cmd
+	fi
     fi
     echo "============================================"
 
