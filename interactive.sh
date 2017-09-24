@@ -116,7 +116,7 @@ pmemf=$(echo $pmem\000mb) # format memory into pbs-acceptable form
 
 ## Generate PBS file using given parameters
 
-if [ "$fileinput" -eq "1" ]; then
+if [ "$fileinput" -eq "1" ] ||  [ "$lambda" -ge "1" ] ; then
     echo "#PBS -N $name" >  $temp
     echo "#PBS -m abe" >> $temp
     echo "#PBS -M $USER@umich.edu" >> $temp
@@ -190,7 +190,7 @@ else
     read -n1 -r -p "Does this look okay? Press Return to submit..." key
 
     if [ -z $key ]; then # Pressed, therefore submit
-        if [ "$fileinput" -eq "1" ] ; then
+        if [ "$fileinput" -eq "1" ] || [ "$lambda" -ge "1" ] ; then
             qsub $temp
     #   emacs $temp
         echo
